@@ -32,7 +32,7 @@ def index():
 
 @app.route("/q")
 def query():
-    search_results = spotify.search(request.args.get("query"))
+    search_results = spotify.search(request.args.get("query"), limit=50)
     return {"data": search_results}
 
 
@@ -68,21 +68,21 @@ def download(spotify_track_id):
             print(["http://www.youtube.com" + yt_res["videos"][0]["url_suffix"]])
             ydl.download(["http://www.youtube.com" + yt_res["videos"][0]["url_suffix"]])
 
-        track_file = eyed3.load(f"{SAVE_DIR}{yt_id}.mp3")
-        track_file.tag.artist = str(artist)
-        track_file.tag.album = str(album)
-        track_file.tag.album_artist = str(metadata["album"]["artists"][0]["name"])
-        track_file.tag.title = str(title)
-        track_file.tag.track_num = int(metadata["track_number"])
+            track_file = eyed3.load(f"{SAVE_DIR}{yt_id}.mp3")
+            track_file.tag.artist = str(artist)
+            track_file.tag.album = str(album)
+            track_file.tag.album_artist = str(metadata["album"]["artists"][0]["name"])
+            track_file.tag.title = str(title)
+            track_file.tag.track_num = int(metadata["track_number"])
 
-        data = urllib.request.urlopen(image_url).read()
+            data = urllib.request.urlopen(image_url).read()
 
-        track_file.tag.images.set(3, data, "image/jpeg", "")
-        track_file.tag.save()
+            track_file.tag.images.set(3, data, "image/jpeg", "")
+            track_file.tag.save()
 
-        shutil.move(f"{SAVE_DIR}{yt_id}.mp3", f"{SAVE_DIR}{artist} - {title}.mp3")
+            shutil.move(f"{SAVE_DIR}{yt_id}.mp3", f"{SAVE_DIR}{artist} - {title}.mp3")
 
-        return send_file(f"{SAVE_DIR}{artist} - {title}.mp3")
+            return send_file(f"{SAVE_DIR}{artist} - {title}.mp3")
     except Exception as e:
         print(e)
         abort(404)
