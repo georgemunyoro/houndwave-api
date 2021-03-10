@@ -13,4 +13,3 @@ COPY . .
 EXPOSE 8000
 
 CMD ["gunicorn", "index:app"]
-
