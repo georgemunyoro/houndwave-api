@@ -1,11 +1,12 @@
-from flask import Flask, request, send_from_directory, abort, send_file
-from flask_cors import CORS, cross_origin
-import spotipy
 import json
-from dotenv import load_dotenv
-from youtube_search import YoutubeSearch
-import youtube_dl
 import os
+
+import spotipy
+import youtube_dl
+from dotenv import load_dotenv
+from flask import Flask, abort, request, send_file, send_from_directory
+from flask_cors import CORS, cross_origin
+from youtube_search import YoutubeSearch
 
 load_dotenv()
 
