@@ -38,7 +38,8 @@ def download():
         artist = request.args.get("artist")
         title = request.args.get("title")
 
-        yt_res = json.loads(YoutubeSearch(f"{artist} {title}", max_results=1).to_json())
+        yt_res = json.loads(YoutubeSearch(
+            f"{artist} {title}", max_results=1).to_json())
 
         with youtube_dl.YoutubeDL() as ydl:
             return ydl.extract_info("http://www.youtube.com" + yt_res["videos"][0]["url_suffix"], download=False)
