@@ -18,10 +18,8 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-
 spotify_credentials = spotipy.SpotifyClientCredentials(
-    client_id=os.getenv("CLIENT_ID"), client_secret=os.getenv("CLIENT_SECRET")
-)
+    client_id=os.getenv("CLIENT_ID"), client_secret=os.getenv("CLIENT_SECRET"))
 spotify = spotipy.Spotify(client_credentials_manager=spotify_credentials)
 
 
@@ -44,7 +42,8 @@ def download():
         artist = request.args.get("artist")
         title = request.args.get("title")
 
-        yt_res = json.loads(YoutubeSearch(f"{artist} {title}", max_results=1).to_json())
+        yt_res = json.loads(
+            YoutubeSearch(f"{artist} {title}", max_results=1).to_json())
 
         with youtube_dl.YoutubeDL() as ydl:
             return ydl.extract_info(
