@@ -10,8 +10,11 @@ from dotenv import load_dotenv
 from youtube_search import YoutubeSearch
 import youtube_dl
 import os
+from pyyoutube import Api
 
 load_dotenv()
+
+yt_api = Api(api_key=os.getenv("YT_API_KEY"))
 
 app = Flask(__name__)
 CORS(app)
@@ -47,8 +50,7 @@ def download(spotify_track_id):
         artist = ", ".join([artist["name"] for artist in metadata["artists"]])
         image_url = metadata["album"]["images"][0]["url"]
 
-        yt_res = json.loads(YoutubeSearch(f"{artist} {title}", max_results=1).to_json())
-        yt_id = yt_res["videos"][0]["id"]
+        yt_video_id = yt_api.search_by_keywords(q=f"{artist} {title}", search_type=["video"], count=1, limit=1).items[0].id.videoId
 
         SAVE_DIR = os.getenv('SAVE_DIR')
 
@@ -65,10 +67,9 @@ def download(spotify_track_id):
         }
 
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            print(["http://www.youtube.com" + yt_res["videos"][0]["url_suffix"]])
-            ydl.download(["http://www.youtube.com" + yt_res["videos"][0]["url_suffix"]])
+            ydl.download([f"https://www.youtube.com/watch?v={yt_video_id}"])
 
-        track_file = eyed3.load(f"{SAVE_DIR}{yt_id}.mp3")
+        track_file = eyed3.load(f"{SAVE_DIR}{yt_video_id}.mp3")
         track_file.tag.artist = str(artist)
         track_file.tag.album = str(album)
         track_file.tag.album_artist = str(metadata["album"]["artists"][0]["name"])
@@ -80,7 +81,7 @@ def download(spotify_track_id):
         track_file.tag.images.set(3, data, "image/jpeg", "")
         track_file.tag.save()
 
-        shutil.move(f"{SAVE_DIR}{yt_id}.mp3", f"{SAVE_DIR}{artist} - {title}.mp3")
+        shutil.move(f"{SAVE_DIR}{yt_video_id}.mp3", f"{SAVE_DIR}{artist} - {title}.mp3")
 
         return send_file(f"{SAVE_DIR}{artist} - {title}.mp3")
     except Exception as e:
@@ -89,4 +90,4 @@ def download(spotify_track_id):
 
 
 if __name__ == "__main__":
-    app.run(threaded=True, port=5000)
+    app.run(threaded=True, port=5000, host="0.0.0.0")
