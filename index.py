@@ -58,7 +58,12 @@ def download(spotify_track_id):
         album = metadata["album"]["name"]
         date = metadata["album"]["release_date"]
         artist = ", ".join([artist["name"] for artist in metadata["artists"]])
+        album_artists = ", ".join([artist["name"] for artist in metadata["album"]["artists"]])
         image_url = metadata["album"]["images"][0]["url"]
+        track_num = metadata["track_number"]
+        total_tracks = metadata["album"]["total_tracks"]
+        disc_num = metadata["disc_number"]
+        total_discs = metadata["disc_number"]
 
         yt_video_id = (yt_api.search_by_keywords(q=f"{artist} {title}",
                                                  search_type=["video"],
@@ -84,8 +89,10 @@ def download(spotify_track_id):
         f["\xa9nam"] = str(title)
         f["\xa9alb"] = str(album)
         f["\xa9ART"] = str(artist)
-        f["aART"] = str(artist)
+        f["aART"] = str(album_artists)
         f["\xa9day"] = date.split("-")[0]
+        f["trkn"] = (track_num, total_tracks)
+        f["dskn"] = (disc_num, total_discs)
 
         img_data = urllib.request.urlopen(image_url).read()
         f["covr"] = [MP4Cover(img_data, imageformat=MP4Cover.FORMAT_JPEG)]
