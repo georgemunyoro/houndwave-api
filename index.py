@@ -3,6 +3,8 @@ import os
 import uuid
 from subprocess import Popen
 
+import shutil
+import urllib
 import spotipy
 import youtube_dl
 from dotenv import load_dotenv
