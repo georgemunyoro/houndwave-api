@@ -4,12 +4,8 @@ from mutagen.mp4 import MP4, MP4Cover
 from flask import Flask, request, send_from_directory, abort, send_file
 
 from flask_cors import CORS, cross_origin
-from ytmusicapi import YTMusic
 import spotipy
 import json
-import urllib
-import eyed3
-import shutil
 from dotenv import load_dotenv
 from youtube_search import YoutubeSearch
 import youtube_dl
@@ -43,14 +39,12 @@ def index():
 
 @app.route("/q")
 def query():
-    search_results = spotify.search(request.args.get("query"))
+    search_results = spotify.search(request.args.get("query"), limit=50)
     return {"data": search_results}
 
 
 @app.route("/download/<spotify_track_id>")
 def download(spotify_track_id):
-    f_id = uuid.uuid4()
-
     try:
         metadata = spotify.track(spotify_track_id)
 
@@ -89,11 +83,11 @@ def download(spotify_track_id):
 
         shutil.move(f"{SAVE_DIR}{yt_video_id}.mp4", f"{SAVE_DIR}{artist} - {title}.m4a")
         return send_file(f"{SAVE_DIR}{artist} - {title}.m4a", as_attachment=True, mimetype="audio/mp4")
+
     except Exception as e:
         print(e)
         abort(404)
 
 
 if __name__ == "__main__":
-    p = Popen([f"python3 -m http.server --directory {SAVE_DIR}"], shell=True)
-    app.run(threaded=True, port=5000, host="0.0.0.0")
+    app.run(host="0.0.0.0", threaded=True, port=5000)
