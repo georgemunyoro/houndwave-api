@@ -8,9 +8,15 @@ import youtube_dl
 from dotenv import load_dotenv
 from eyed3 import mimetype
 from eyed3.core import Date
-from flask import Flask, abort, request, send_file, send_from_directory
-from flask_cors import CORS, cross_origin
-from mutagen.mp4 import MP4, MP4Cover
+from flask import abort
+from flask import Flask
+from flask import request
+from flask import send_file
+from flask import send_from_directory
+from flask_cors import CORS
+from flask_cors import cross_origin
+from mutagen.mp4 import MP4
+from mutagen.mp4 import MP4Cover
 from pyyoutube import Api
 from youtube_search import YoutubeSearch
 
