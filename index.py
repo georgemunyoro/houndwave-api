@@ -29,10 +29,8 @@ HTTP_SERVER_URL = os.getenv("HTTP_SERVER_URL")
 app = Flask(__name__)
 CORS(app)
 
-
 spotify_credentials = spotipy.SpotifyClientCredentials(
-    client_id=os.getenv("CLIENT_ID"), client_secret=os.getenv("CLIENT_SECRET")
-)
+    client_id=os.getenv("CLIENT_ID"), client_secret=os.getenv("CLIENT_SECRET"))
 spotify = spotipy.Spotify(client_credentials_manager=spotify_credentials)
 
 
@@ -60,20 +58,20 @@ def download(spotify_track_id):
         artist = ", ".join([artist["name"] for artist in metadata["artists"]])
         image_url = metadata["album"]["images"][0]["url"]
 
-        yt_video_id = (
-            yt_api.search_by_keywords(
-                q=f"{artist} {title}", search_type=["video"], count=1, limit=1
-            )
-            .items[0]
-            .id.videoId
-        )
+        yt_video_id = (yt_api.search_by_keywords(q=f"{artist} {title}",
+                                                 search_type=["video"],
+                                                 count=1,
+                                                 limit=1).items[0].id.videoId)
 
         ydl_opts = {
-            "outtmpl": SAVE_DIR + "%(id)s.%(ext)s",
-            "format": "bestaudio/best",
-            "postprocessors": [
-                {"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}
-            ],
+            "outtmpl":
+            SAVE_DIR + "%(id)s.%(ext)s",
+            "format":
+            "bestaudio/best",
+            "postprocessors": [{
+                "key": "FFmpegVideoConvertor",
+                "preferedformat": "mp4"
+            }],
         }
 
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
@@ -92,7 +90,8 @@ def download(spotify_track_id):
 
         f.save()
 
-        shutil.move(f"{SAVE_DIR}{yt_video_id}.mp4", f"{SAVE_DIR}{artist} - {title}.m4a")
+        shutil.move(f"{SAVE_DIR}{yt_video_id}.mp4",
+                    f"{SAVE_DIR}{artist} - {title}.m4a")
         return send_file(
             f"{SAVE_DIR}{artist} - {title}.m4a",
             as_attachment=True,
