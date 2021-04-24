@@ -17,7 +17,7 @@ import uuid
 load_dotenv()
 
 yt_api = Api(api_key=os.getenv("YT_API_KEY"))
-SAVE_DIR = os.getenv('SAVE_DIR')
+SAVE_DIR = os.getenv("SAVE_DIR")
 HTTP_SERVER_URL = os.getenv("HTTP_SERVER_URL")
 
 app = Flask(__name__)
@@ -54,16 +54,20 @@ def download(spotify_track_id):
         artist = ", ".join([artist["name"] for artist in metadata["artists"]])
         image_url = metadata["album"]["images"][0]["url"]
 
-        yt_video_id = yt_api.search_by_keywords(q=f"{artist} {title}", search_type=[
-                                                "video"], count=1, limit=1).items[0].id.videoId
+        yt_video_id = (
+            yt_api.search_by_keywords(
+                q=f"{artist} {title}", search_type=["video"], count=1, limit=1
+            )
+            .items[0]
+            .id.videoId
+        )
 
         ydl_opts = {
             "outtmpl": SAVE_DIR + "%(id)s.%(ext)s",
             "format": "bestaudio/best",
-            'postprocessors': [{
-                'key': 'FFmpegVideoConvertor',
-                'preferedformat': 'mp4'
-            }]
+            "postprocessors": [
+                {"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}
+            ],
         }
 
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
@@ -82,9 +86,12 @@ def download(spotify_track_id):
 
         f.save()
 
-        shutil.move(f"{SAVE_DIR}{yt_video_id}.mp4",
-                    f"{SAVE_DIR}{artist} - {title}.m4a")
-        return send_file(f"{SAVE_DIR}{artist} - {title}.m4a", as_attachment=True, mimetype="audio/mp4")
+        shutil.move(f"{SAVE_DIR}{yt_video_id}.mp4", f"{SAVE_DIR}{artist} - {title}.m4a")
+        return send_file(
+            f"{SAVE_DIR}{artist} - {title}.m4a",
+            as_attachment=True,
+            mimetype="audio/mp4",
+        )
 
     except Exception as e:
         print(e)
