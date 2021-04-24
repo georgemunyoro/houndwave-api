@@ -1,18 +1,18 @@
+import json
+import os
+import uuid
+from subprocess import Popen
+
+import spotipy
+import youtube_dl
+from dotenv import load_dotenv
 from eyed3 import mimetype
 from eyed3.core import Date
-from mutagen.mp4 import MP4, MP4Cover
-from flask import Flask, request, send_from_directory, abort, send_file
-
+from flask import Flask, abort, request, send_file, send_from_directory
 from flask_cors import CORS, cross_origin
-import spotipy
-import json
-from dotenv import load_dotenv
-from youtube_search import YoutubeSearch
-import youtube_dl
-import os
+from mutagen.mp4 import MP4, MP4Cover
 from pyyoutube import Api
-from subprocess import Popen
-import uuid
+from youtube_search import YoutubeSearch
 
 load_dotenv()
 
