@@ -1,4 +1,8 @@
+from eyed3 import mimetype
+from eyed3.core import Date
+from mutagen.mp4 import MP4, MP4Cover
 from flask import Flask, request, send_from_directory, abort, send_file
+
 from flask_cors import CORS, cross_origin
 from ytmusicapi import YTMusic
 import spotipy
@@ -11,10 +15,14 @@ from youtube_search import YoutubeSearch
 import youtube_dl
 import os
 from pyyoutube import Api
+from subprocess import Popen
+import uuid
 
 load_dotenv()
 
 yt_api = Api(api_key=os.getenv("YT_API_KEY"))
+SAVE_DIR = os.getenv('SAVE_DIR')
+HTTP_SERVER_URL = os.getenv("HTTP_SERVER_URL")
 
 app = Flask(__name__)
 CORS(app)
@@ -41,6 +49,8 @@ def query():
 
 @app.route("/download/<spotify_track_id>")
 def download(spotify_track_id):
+    f_id = uuid.uuid4()
+
     try:
         metadata = spotify.track(spotify_track_id)
 
@@ -52,42 +62,38 @@ def download(spotify_track_id):
 
         yt_video_id = yt_api.search_by_keywords(q=f"{artist} {title}", search_type=["video"], count=1, limit=1).items[0].id.videoId
 
-        SAVE_DIR = os.getenv('SAVE_DIR')
-
         ydl_opts = {
             "outtmpl": SAVE_DIR + "%(id)s.%(ext)s",
             "format": "bestaudio/best",
-            "postprocessors": [
-                {
-                    "key": "FFmpegExtractAudio",
-                    "preferredcodec": "mp3",
-                    "preferredquality": "192",
-                }
-            ],
+            'postprocessors': [{
+                'key': 'FFmpegVideoConvertor',
+                'preferedformat': 'mp4'
+            }]
         }
 
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             ydl.download([f"https://www.youtube.com/watch?v={yt_video_id}"])
 
-        track_file = eyed3.load(f"{SAVE_DIR}{yt_video_id}.mp3")
-        track_file.tag.artist = str(artist)
-        track_file.tag.album = str(album)
-        track_file.tag.album_artist = str(metadata["album"]["artists"][0]["name"])
-        track_file.tag.title = str(title)
-        track_file.tag.track_num = int(metadata["track_number"])
+        f = MP4(f"{SAVE_DIR}{yt_video_id}.mp4")
 
-        data = urllib.request.urlopen(image_url).read()
+        f["\xa9nam"] = str(title)
+        f["\xa9alb"] = str(album)
+        f["\xa9ART"] = str(artist)
+        f["aART"] = str(artist)
+        f["\xa9day"] = date.split("-")[0]
 
-        track_file.tag.images.set(3, data, "image/jpeg", "")
-        track_file.tag.save()
+        img_data = urllib.request.urlopen(image_url).read()
+        f["covr"] = [MP4Cover(img_data, imageformat=MP4Cover.FORMAT_JPEG)]
 
-        shutil.move(f"{SAVE_DIR}{yt_video_id}.mp3", f"{SAVE_DIR}{artist} - {title}.mp3")
+        f.save()
 
-        return send_file(f"{SAVE_DIR}{artist} - {title}.mp3")
+        shutil.move(f"{SAVE_DIR}{yt_video_id}.mp4", f"{SAVE_DIR}{artist} - {title}.m4a")
+        return send_file(f"{SAVE_DIR}{artist} - {title}.m4a", as_attachment=True, mimetype="audio/mp4")
     except Exception as e:
         print(e)
         abort(404)
 
 
 if __name__ == "__main__":
-    app.run(threaded=True, port=5000)
+    p = Popen([f"python3 -m http.server --directory {SAVE_DIR}"], shell=True)
+    app.run(threaded=True, port=5000, host="0.0.0.0")
