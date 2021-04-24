@@ -1,21 +1,36 @@
-from flask import Flask, request, send_from_directory, abort, send_file
-from flask_cors import CORS, cross_origin
-import spotipy
 import json
-from dotenv import load_dotenv
-from youtube_search import YoutubeSearch
-import youtube_dl
 import os
+import uuid
+from subprocess import Popen
+
+import spotipy
+import youtube_dl
+from dotenv import load_dotenv
+from eyed3 import mimetype
+from eyed3.core import Date
+from flask import abort
+from flask import Flask
+from flask import request
+from flask import send_file
+from flask import send_from_directory
+from flask_cors import CORS
+from flask_cors import cross_origin
+from mutagen.mp4 import MP4
+from mutagen.mp4 import MP4Cover
+from pyyoutube import Api
+from youtube_search import YoutubeSearch
 
 load_dotenv()
+
+yt_api = Api(api_key=os.getenv("YT_API_KEY"))
+SAVE_DIR = os.getenv("SAVE_DIR")
+HTTP_SERVER_URL = os.getenv("HTTP_SERVER_URL")
 
 app = Flask(__name__)
 CORS(app)
 
-
 spotify_credentials = spotipy.SpotifyClientCredentials(
-    client_id=os.getenv("CLIENT_ID"), client_secret=os.getenv("CLIENT_SECRET")
-)
+    client_id=os.getenv("CLIENT_ID"), client_secret=os.getenv("CLIENT_SECRET"))
 spotify = spotipy.Spotify(client_credentials_manager=spotify_credentials)
 
 
@@ -32,16 +47,56 @@ def query():
     return {"data": search_results}
 
 
-@app.route("/download")
-def download():
+@app.route("/download/<spotify_track_id>")
+def download(spotify_track_id):
     try:
-        artist = request.args.get("artist")
-        title = request.args.get("title")
+        metadata = spotify.track(spotify_track_id)
 
-        yt_res = json.loads(YoutubeSearch(f"{artist} {title}", max_results=1).to_json())
+        title = metadata["name"]
+        album = metadata["album"]["name"]
+        date = metadata["album"]["release_date"]
+        artist = ", ".join([artist["name"] for artist in metadata["artists"]])
+        image_url = metadata["album"]["images"][0]["url"]
 
-        with youtube_dl.YoutubeDL() as ydl:
-            return ydl.extract_info("http://www.youtube.com" + yt_res["videos"][0]["url_suffix"], download=False)
+        yt_video_id = (yt_api.search_by_keywords(q=f"{artist} {title}",
+                                                 search_type=["video"],
+                                                 count=1,
+                                                 limit=1).items[0].id.videoId)
+
+        ydl_opts = {
+            "outtmpl":
+            SAVE_DIR + "%(id)s.%(ext)s",
+            "format":
+            "bestaudio/best",
+            "postprocessors": [{
+                "key": "FFmpegVideoConvertor",
+                "preferedformat": "mp4"
+            }],
+        }
+
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([f"https://www.youtube.com/watch?v={yt_video_id}"])
+
+        f = MP4(f"{SAVE_DIR}{yt_video_id}.mp4")
+
+        f["\xa9nam"] = str(title)
+        f["\xa9alb"] = str(album)
+        f["\xa9ART"] = str(artist)
+        f["aART"] = str(artist)
+        f["\xa9day"] = date.split("-")[0]
+
+        img_data = urllib.request.urlopen(image_url).read()
+        f["covr"] = [MP4Cover(img_data, imageformat=MP4Cover.FORMAT_JPEG)]
+
+        f.save()
+
+        shutil.move(f"{SAVE_DIR}{yt_video_id}.mp4",
+                    f"{SAVE_DIR}{artist} - {title}.m4a")
+        return send_file(
+            f"{SAVE_DIR}{artist} - {title}.m4a",
+            as_attachment=True,
+            mimetype="audio/mp4",
+        )
 
     except Exception as e:
         print(e)
