@@ -54,7 +54,8 @@ def download(spotify_track_id):
         artist = ", ".join([artist["name"] for artist in metadata["artists"]])
         image_url = metadata["album"]["images"][0]["url"]
 
-        yt_video_id = yt_api.search_by_keywords(q=f"{artist} {title}", search_type=["video"], count=1, limit=1).items[0].id.videoId
+        yt_video_id = yt_api.search_by_keywords(q=f"{artist} {title}", search_type=[
+                                                "video"], count=1, limit=1).items[0].id.videoId
 
         ydl_opts = {
             "outtmpl": SAVE_DIR + "%(id)s.%(ext)s",
@@ -81,7 +82,8 @@ def download(spotify_track_id):
 
         f.save()
 
-        shutil.move(f"{SAVE_DIR}{yt_video_id}.mp4", f"{SAVE_DIR}{artist} - {title}.m4a")
+        shutil.move(f"{SAVE_DIR}{yt_video_id}.mp4",
+                    f"{SAVE_DIR}{artist} - {title}.m4a")
         return send_file(f"{SAVE_DIR}{artist} - {title}.m4a", as_attachment=True, mimetype="audio/mp4")
 
     except Exception as e:
