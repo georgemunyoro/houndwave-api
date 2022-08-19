@@ -6,7 +6,7 @@ from subprocess import Popen
 import shutil
 import urllib
 import spotipy
-import youtube_dl
+from yt_dlp import YoutubeDL
 from dotenv import load_dotenv
 from eyed3 import mimetype
 from eyed3.core import Date
@@ -51,65 +51,59 @@ def query():
 
 @app.route("/download/<spotify_track_id>")
 def download(spotify_track_id):
-    try:
-        metadata = spotify.track(spotify_track_id)
+    metadata = spotify.track(spotify_track_id)
 
-        title = metadata["name"]
-        album = metadata["album"]["name"]
-        date = metadata["album"]["release_date"]
-        artist = ", ".join([artist["name"] for artist in metadata["artists"]])
-        album_artists = ", ".join([artist["name"] for artist in metadata["album"]["artists"]])
-        image_url = metadata["album"]["images"][0]["url"]
-        track_num = metadata["track_number"]
-        total_tracks = metadata["album"]["total_tracks"]
-        disc_num = metadata["disc_number"]
-        total_discs = metadata["disc_number"]
+    title = metadata["name"]
+    album = metadata["album"]["name"]
+    date = metadata["album"]["release_date"]
+    artist = ", ".join([artist["name"] for artist in metadata["artists"]])
+    album_artists = ", ".join([artist["name"] for artist in metadata["album"]["artists"]])
+    image_url = metadata["album"]["images"][0]["url"]
+    track_num = metadata["track_number"]
+    total_tracks = metadata["album"]["total_tracks"]
+    disc_num = metadata["disc_number"]
+    total_discs = metadata["disc_number"]
 
-        yt_video_id = (yt_api.search_by_keywords(q=f"{artist} {title}",
-                                                 search_type=["video"],
-                                                 count=1,
-                                                 limit=1).items[0].id.videoId)
+    yt_video_id = (yt_api.search_by_keywords(q=f"{artist} {title}",
+                                             search_type=["video"],
+                                             count=1,
+                                             limit=1).items[0].id.videoId)
 
-        ydl_opts = {
-            "outtmpl":
-            SAVE_DIR + "%(id)s.%(ext)s",
-            "format":
-            "bestaudio/best",
-            "postprocessors": [{
-                "key": "FFmpegVideoConvertor",
-                "preferedformat": "mp4"
-            }],
-        }
+    ydl_opts = {
+        "outtmpl":
+        SAVE_DIR + "%(id)s.%(ext)s",
+        "format":
+        "bestaudio/best",
+        "postprocessors": [{
+            "key": "FFmpegVideoConvertor",
+            "preferedformat": "mp4"
+        }],
+    }
 
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([f"https://www.youtube.com/watch?v={yt_video_id}"])
+    with YoutubeDL(ydl_opts) as ydl:
+        ydl.download([f"https://www.youtube.com/watch?v={yt_video_id}"])
 
-        f = MP4(f"{SAVE_DIR}{yt_video_id}.mp4")
+    filename = f"{SAVE_DIR}{yt_video_id}.mp4"
+    print(filename)
 
-        f["\xa9nam"] = str(title)
-        f["\xa9alb"] = str(album)
-        f["\xa9ART"] = str(artist)
-        f["aART"] = str(album_artists)
-        f["\xa9day"] = date.split("-")[0]
-        f["trkn"] = (track_num, total_tracks)
-        f["dskn"] = (disc_num, total_discs)
+    f = MP4(filename)
 
-        img_data = urllib.request.urlopen(image_url).read()
-        f["covr"] = [MP4Cover(img_data, imageformat=MP4Cover.FORMAT_JPEG)]
+    f["\xa9nam"] = str(title)
+    f["\xa9alb"] = str(album)
+    f["\xa9ART"] = str(artist)
+    f["aART"] = str(album_artists)
+    f["\xa9day"] = date.split("-")[0]
 
-        f.save()
+    img_data = urllib.request.urlopen(image_url).read()
+    f["covr"] = [MP4Cover(img_data, imageformat=MP4Cover.FORMAT_JPEG)]
 
-        shutil.move(f"{SAVE_DIR}{yt_video_id}.mp4",
-                    f"{SAVE_DIR}{artist} - {title}.m4a")
-        return send_file(
-            f"{SAVE_DIR}{artist} - {title}.m4a",
-            as_attachment=True,
-            mimetype="audio/mp4",
-        )
+    f.save()
 
-    except Exception as e:
-        print(e)
-        abort(404)
+    return send_file(
+        filename,
+        as_attachment=True,
+        download_name=f"{artist} - {title}.mp4"
+    )
 
 
 if __name__ == "__main__":
