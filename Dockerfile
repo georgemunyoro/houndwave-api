@@ -18,5 +18,7 @@ COPY . .
 
 EXPOSE 8000
 
+RUN apt-get -y update && apt-get -y upgrade && apt-get install -y --no-install-recommends ffmpeg
+
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "index:app" ]
 
