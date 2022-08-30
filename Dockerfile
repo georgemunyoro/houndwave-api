@@ -10,6 +10,7 @@ ENV CLIENT_SECRET=$CLIENT_SECRET
 ENV CLIENT_ID=$CLIENT_ID
 ENV HTTP_SERVER_URL=$HTTP_SERVER_URL
 ENV SAVE_DIR=$SAVE_DIR
+ENV WORKER_COUNT=$WORKER_COUNT
 
 RUN pip install -r requirements.txt
 
@@ -20,5 +21,5 @@ EXPOSE 8000
 
 RUN apt-get -y update && apt-get -y upgrade && apt-get install -y --no-install-recommends ffmpeg
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "index:app" ]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers=${WORKER_COUNT}", "index:app" ]
 
