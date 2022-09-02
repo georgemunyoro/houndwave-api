@@ -1,33 +1,20 @@
-import json
 import os
-import uuid
 import time
-from subprocess import Popen
 
-import shutil
 import urllib
 import spotipy
+import requests
 from yt_dlp import YoutubeDL
 from dotenv import load_dotenv
-from eyed3 import mimetype
-from eyed3.core import Date
-from flask import abort
-from flask import Flask, Response
-from flask import request
-from flask import send_file
-from flask import send_from_directory
+from flask import Flask, Response, request, send_file
 from flask_cors import CORS
-from flask_cors import cross_origin
-from mutagen.mp4 import MP4
-from mutagen.mp4 import MP4Cover
+from mutagen.mp4 import MP4, MP4Cover
 from pyyoutube import Api
-from youtube_search import YoutubeSearch
 from prometheus_client import make_wsgi_app
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from werkzeug.serving import run_simple
 from flask_prometheus_metrics import register_metrics
-from prometheus_client import multiprocess
-from prometheus_client import generate_latest, CollectorRegistry, CONTENT_TYPE_LATEST, Gauge, Counter, Histogram
+from prometheus_client import multiprocess, generate_latest, CollectorRegistry, CONTENT_TYPE_LATEST, Gauge, Counter, Histogram
 
 
 load_dotenv()
@@ -35,6 +22,7 @@ load_dotenv()
 yt_api = Api(api_key=os.getenv("YT_API_KEY"))
 SAVE_DIR = os.getenv("SAVE_DIR")
 HTTP_SERVER_URL = os.getenv("HTTP_SERVER_URL")
+INVIDIOUS_INSTANCE = os.getenv('INVIDIOUS_INSTANCE')
 
 PORT = 5000
 try:
@@ -103,10 +91,9 @@ def download(spotify_track_id):
     disc_num = metadata["disc_number"]
     total_discs = metadata["disc_number"]
 
-    yt_video_id = (yt_api.search_by_keywords(q=f"{artist} {title}",
-                                             search_type=["video"],
-                                             count=1,
-                                             limit=1).items[0].id.videoId)
+    yt_video_id = requests.get(f"{INVIDIOUS_INSTANCE}/api/v1/search",
+        params={'q': f"{artist} {title}"},
+    ).json()[0]["videoId"]
 
     ydl_opts = {
         "outtmpl":
