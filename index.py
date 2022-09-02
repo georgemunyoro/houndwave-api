@@ -15,6 +15,7 @@ from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from werkzeug.serving import run_simple
 from flask_prometheus_metrics import register_metrics
 from prometheus_client import multiprocess, generate_latest, CollectorRegistry, CONTENT_TYPE_LATEST, Gauge, Counter, Histogram
+import flask_monitoringdashboard as dashboard
 
 
 load_dotenv()
@@ -31,6 +32,8 @@ except:
     pass
 
 app = Flask(__name__)
+dashboard.config.database_name = os.getenv("MONITORING_DB_FILEPATH")
+dashboard.bind(app)
 CORS(app)
 
 REQUEST_COUNT = Counter(
