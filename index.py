@@ -21,12 +21,19 @@ from mutagen.mp4 import MP4
 from mutagen.mp4 import MP4Cover
 from pyyoutube import Api
 from youtube_search import YoutubeSearch
+from prometheus_client import make_wsgi_app
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
+from werkzeug.serving import run_simple
+from flask_prometheus_metrics import register_metrics
 
 load_dotenv()
 
 yt_api = Api(api_key=os.getenv("YT_API_KEY"))
 SAVE_DIR = os.getenv("SAVE_DIR")
 HTTP_SERVER_URL = os.getenv("HTTP_SERVER_URL")
+
+PORT = int(os.getenv("PORT"))
+if (PORT is None): PORT = 5000
 
 app = Flask(__name__)
 CORS(app)
@@ -107,4 +114,6 @@ def download(spotify_track_id):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", threaded=True, port=5000)
+    register_metrics(app, app_version="0.0.0", app_config="staging")
+    dispatcher = DispatcherMiddleware(app.wsgi_app, {"/metrics": make_wsgi_app()})
+    run_simple(hostname="0.0.0.0", port=PORT, threaded=True, application=dispatcher)
