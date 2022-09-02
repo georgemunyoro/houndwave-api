@@ -1,6 +1,7 @@
 import json
 import os
 import uuid
+import time
 from subprocess import Popen
 
 import shutil
@@ -11,7 +12,7 @@ from dotenv import load_dotenv
 from eyed3 import mimetype
 from eyed3.core import Date
 from flask import abort
-from flask import Flask
+from flask import Flask, Response
 from flask import request
 from flask import send_file
 from flask import send_from_directory
@@ -25,6 +26,9 @@ from prometheus_client import make_wsgi_app
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from werkzeug.serving import run_simple
 from flask_prometheus_metrics import register_metrics
+from prometheus_client import multiprocess
+from prometheus_client import generate_latest, CollectorRegistry, CONTENT_TYPE_LATEST, Gauge, Counter, Histogram
+
 
 load_dotenv()
 
@@ -40,6 +44,31 @@ except:
 
 app = Flask(__name__)
 CORS(app)
+
+REQUEST_COUNT = Counter(
+    "request_count",
+    "App Request Count",
+    ["prometheus_app", "method", "endpoint", "http_status"],
+)
+REQUEST_LATENCY = Histogram(
+    "request_latency_seconds", "Request latency", ["app_name", "endpoint"]
+)
+CONTENT_TYPE_LATEST = str("text/plain; version=0.0.4; charset=utf-8")
+
+@app.before_request
+def before_request():
+    request.start_time = time.time()
+
+
+@app.after_request
+def after_request(response):
+    resp_time = time.time() - request.start_time
+    REQUEST_COUNT.labels(
+        "prometheus_app", request.method, request.path, response.status_code
+    ).inc()
+    REQUEST_LATENCY.labels("prometheus_app", request.path).observe(resp_time)
+    return response
+
 
 spotify_credentials = spotipy.SpotifyClientCredentials(
     client_id=os.getenv("CLIENT_ID"), client_secret=os.getenv("CLIENT_SECRET"))
@@ -114,6 +143,14 @@ def download(spotify_track_id):
         as_attachment=True,
         download_name=f"{artist} - {title}.mp4"
     )
+
+
+@app.route("/metrics")
+def metrics():
+    registry = CollectorRegistry()
+    multiprocess.MultiProcessCollector(registry)
+    data = generate_latest(registry)
+    return Response(data, mimetype=CONTENT_TYPE_LATEST)
 
 
 if __name__ == "__main__":
