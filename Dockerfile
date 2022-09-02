@@ -21,5 +21,5 @@ EXPOSE 8000
 
 RUN apt-get -y update && apt-get -y upgrade && apt-get install -y --no-install-recommends ffmpeg
 
-CMD gunicorn --bind 0.0.0.0:8000 --workers=$WORKER_COUNT index:app
+CMD PROMETHEUS_MULTIPROC_DIR=/var/prometheus-hw gunicorn -c gunicorn_conf.py --bind 0.0.0.0:8000 --workers=$WORKER_COUNT index:app
 
