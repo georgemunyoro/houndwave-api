@@ -32,8 +32,11 @@ yt_api = Api(api_key=os.getenv("YT_API_KEY"))
 SAVE_DIR = os.getenv("SAVE_DIR")
 HTTP_SERVER_URL = os.getenv("HTTP_SERVER_URL")
 
-PORT = int(os.getenv("PORT"))
-if (PORT is None): PORT = 5000
+PORT = 5000
+try:
+    PORT = int(os.getenv("PORT"))
+except:
+    pass
 
 app = Flask(__name__)
 CORS(app)
