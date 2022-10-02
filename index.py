@@ -16,6 +16,8 @@ from werkzeug.serving import run_simple
 from flask_prometheus_metrics import register_metrics
 from prometheus_client import multiprocess, generate_latest, CollectorRegistry, CONTENT_TYPE_LATEST, Gauge, Counter, Histogram
 import flask_monitoringdashboard as dashboard
+from pydeezer import Deezer
+from pydeezer.constants import track_formats
 
 
 load_dotenv()
@@ -24,8 +26,9 @@ yt_api = Api(api_key=os.getenv("YT_API_KEY"))
 SAVE_DIR = os.getenv("SAVE_DIR")
 HTTP_SERVER_URL = os.getenv("HTTP_SERVER_URL")
 INVIDIOUS_INSTANCE = os.getenv('INVIDIOUS_INSTANCE')
+DEEZER_ARL = os.getenv("DEEZER_ARL")
 
-PORT = 5000
+PORT = 4000
 try:
     PORT = int(os.getenv("PORT"))
 except:
@@ -65,6 +68,7 @@ spotify_credentials = spotipy.SpotifyClientCredentials(
     client_id=os.getenv("CLIENT_ID"), client_secret=os.getenv("CLIENT_SECRET"))
 spotify = spotipy.Spotify(client_credentials_manager=spotify_credentials)
 
+deezer = Deezer(arl=DEEZER_ARL)
 
 @app.route("/")
 def index():
@@ -75,63 +79,19 @@ def index():
 
 @app.route("/q")
 def query():
-    search_results = spotify.search(request.args.get("query"), limit=50)
+    search_results = deezer.search_tracks(request.args.get("query"))
     return {"data": search_results}
 
 
 @app.route("/download/<spotify_track_id>")
 def download(spotify_track_id):
-    metadata = spotify.track(spotify_track_id)
-
-    title = metadata["name"]
-    album = metadata["album"]["name"]
-    date = metadata["album"]["release_date"]
-    artist = ", ".join([artist["name"] for artist in metadata["artists"]])
-    album_artists = ", ".join([artist["name"] for artist in metadata["album"]["artists"]])
-    image_url = metadata["album"]["images"][0]["url"]
-    track_num = metadata["track_number"]
-    total_tracks = metadata["album"]["total_tracks"]
-    disc_num = metadata["disc_number"]
-    total_discs = metadata["disc_number"]
-
-    yt_video_id = requests.get(f"{INVIDIOUS_INSTANCE}/api/v1/search",
-        params={'q': f"{artist} {title}"},
-    ).json()[0]["videoId"]
-
-    ydl_opts = {
-        "outtmpl":
-        SAVE_DIR + "%(id)s.%(ext)s",
-        "format":
-        "bestaudio/best",
-        "postprocessors": [{
-            "key": "FFmpegVideoConvertor",
-            "preferedformat": "mp4"
-        }],
-    }
-
-    with YoutubeDL(ydl_opts) as ydl:
-        ydl.download([f"https://www.youtube.com/watch?v={yt_video_id}"])
-
-    filename = f"{SAVE_DIR}{yt_video_id}.mp4"
-    print(filename)
-
-    f = MP4(filename)
-
-    f["\xa9nam"] = str(title)
-    f["\xa9alb"] = str(album)
-    f["\xa9ART"] = str(artist)
-    f["aART"] = str(album_artists)
-    f["\xa9day"] = date.split("-")[0]
-
-    img_data = urllib.request.urlopen(image_url).read()
-    f["covr"] = [MP4Cover(img_data, imageformat=MP4Cover.FORMAT_JPEG)]
-
-    f.save()
+    track = deezer.get_track(int(spotify_track_id))
+    track["download"](download_dir=SAVE_DIR, filename=spotify_track_id, quality=track_formats.MP3_320)
 
     return send_file(
-        filename,
+        SAVE_DIR + spotify_track_id + ".mp3",
         as_attachment=True,
-        download_name=f"{artist} - {title}.mp4"
+        download_name=spotify_track_id + ".mp3"
     )
 
 
