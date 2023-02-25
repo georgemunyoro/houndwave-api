@@ -14,16 +14,31 @@ from prometheus_client import make_wsgi_app
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from werkzeug.serving import run_simple
 from flask_prometheus_metrics import register_metrics
-from prometheus_client import multiprocess, generate_latest, CollectorRegistry, CONTENT_TYPE_LATEST, Gauge, Counter, Histogram
+from prometheus_client import (
+    multiprocess,
+    generate_latest,
+    CollectorRegistry,
+    CONTENT_TYPE_LATEST,
+    Gauge,
+    Counter,
+    Histogram,
+)
 import flask_monitoringdashboard as dashboard
+import sentry_sdk
 
 
 load_dotenv()
 
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+
+if SENTRY_DSN is not None:
+    sentry_sdk.init(dsn=SENTRY_DSN, traces_sample_rate=1.0)
+
+
 yt_api = Api(api_key=os.getenv("YT_API_KEY"))
 SAVE_DIR = os.getenv("SAVE_DIR")
 HTTP_SERVER_URL = os.getenv("HTTP_SERVER_URL")
-INVIDIOUS_INSTANCE = os.getenv('INVIDIOUS_INSTANCE')
+INVIDIOUS_INSTANCE = os.getenv("INVIDIOUS_INSTANCE")
 
 PORT = 5000
 try:
@@ -46,6 +61,7 @@ REQUEST_LATENCY = Histogram(
 )
 CONTENT_TYPE_LATEST = str("text/plain; version=0.0.4; charset=utf-8")
 
+
 @app.before_request
 def before_request():
     request.start_time = time.time()
@@ -62,7 +78,8 @@ def after_request(response):
 
 
 spotify_credentials = spotipy.SpotifyClientCredentials(
-    client_id=os.getenv("CLIENT_ID"), client_secret=os.getenv("CLIENT_SECRET"))
+    client_id=os.getenv("CLIENT_ID"), client_secret=os.getenv("CLIENT_SECRET")
+)
 spotify = spotipy.Spotify(client_credentials_manager=spotify_credentials)
 
 
@@ -87,26 +104,24 @@ def download(spotify_track_id):
     album = metadata["album"]["name"]
     date = metadata["album"]["release_date"]
     artist = ", ".join([artist["name"] for artist in metadata["artists"]])
-    album_artists = ", ".join([artist["name"] for artist in metadata["album"]["artists"]])
+    album_artists = ", ".join(
+        [artist["name"] for artist in metadata["album"]["artists"]]
+    )
     image_url = metadata["album"]["images"][0]["url"]
     track_num = metadata["track_number"]
     total_tracks = metadata["album"]["total_tracks"]
     disc_num = metadata["disc_number"]
     total_discs = metadata["disc_number"]
 
-    yt_video_id = requests.get(f"{INVIDIOUS_INSTANCE}/api/v1/search",
-        params={'q': f"{artist} {title}"},
+    yt_video_id = requests.get(
+        f"{INVIDIOUS_INSTANCE}/api/v1/search",
+        params={"q": f"{artist} {title}"},
     ).json()[0]["videoId"]
 
     ydl_opts = {
-        "outtmpl":
-        SAVE_DIR + "%(id)s.%(ext)s",
-        "format":
-        "bestaudio/best",
-        "postprocessors": [{
-            "key": "FFmpegVideoConvertor",
-            "preferedformat": "mp4"
-        }],
+        "outtmpl": SAVE_DIR + "%(id)s.%(ext)s",
+        "format": "bestaudio/best",
+        "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
     }
 
     with YoutubeDL(ydl_opts) as ydl:
@@ -129,9 +144,7 @@ def download(spotify_track_id):
     f.save()
 
     return send_file(
-        filename,
-        as_attachment=True,
-        download_name=f"{artist} - {title}.mp4"
+        filename, as_attachment=True, download_name=f"{artist} - {title}.mp4"
     )
 
 
