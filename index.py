@@ -40,6 +40,9 @@ if SENTRY_DSN is not None and ENVIRONMENT is not None and BUILD_SHA is not None:
         traces_sample_rate=1.0,
         environment=ENVIRONMENT,
         release=BUILD_SHA,
+        integrations=[
+            sentry_sdk.integrations.flask.FlaskIntegration(),
+        ]
     )
 
 
