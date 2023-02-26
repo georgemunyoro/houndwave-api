@@ -25,6 +25,7 @@ from prometheus_client import (
 import flask_monitoringdashboard as dashboard
 import sentry_sdk
 import git
+from sentry_sdk.integrations.flask import FlaskIntegration
 
 load_dotenv()
 
@@ -34,8 +35,10 @@ ENVIRONMENT: str = os.getenv("ENVIRONMENT")
 
 print(f"Running server build {BUILD_SHA} in {ENVIRONMENT} environment")
 
+
 def traces_sampler(sampling_context):
     return True
+
 
 if SENTRY_DSN is not None and ENVIRONMENT is not None and BUILD_SHA is not None:
     sentry_sdk.init(
@@ -44,7 +47,7 @@ if SENTRY_DSN is not None and ENVIRONMENT is not None and BUILD_SHA is not None:
         environment=ENVIRONMENT,
         release=BUILD_SHA,
         integrations=[
-            sentry_sdk.integrations.flask.FlaskIntegration(),
+            FlaskIntegration(),
         ],
         _experiments={
             "profiles_sample_rate": 1.0,
