@@ -1,6 +1,7 @@
 APScheduler==3.9.1
 async-timeout==4.0.2
 black==23.1.0
+blinker==1.5
 Brotli==1.0.9
 certifi==2022.6.15
 cffi==1.15.1
