@@ -34,6 +34,9 @@ ENVIRONMENT: str = os.getenv("ENVIRONMENT")
 
 print(f"Running server build {BUILD_SHA} in {ENVIRONMENT} environment")
 
+def traces_sampler(sampling_context):
+    return True
+
 if SENTRY_DSN is not None and ENVIRONMENT is not None and BUILD_SHA is not None:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
@@ -42,7 +45,11 @@ if SENTRY_DSN is not None and ENVIRONMENT is not None and BUILD_SHA is not None:
         release=BUILD_SHA,
         integrations=[
             sentry_sdk.integrations.flask.FlaskIntegration(),
-        ]
+        ],
+        _experiments={
+            "profiles_sample_rate": 1.0,
+        },
+        traces_sampler=traces_sampler,
     )
 
 
