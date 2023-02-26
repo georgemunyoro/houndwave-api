@@ -19,20 +19,28 @@ from prometheus_client import (
     generate_latest,
     CollectorRegistry,
     CONTENT_TYPE_LATEST,
-    Gauge,
     Counter,
     Histogram,
 )
 import flask_monitoringdashboard as dashboard
 import sentry_sdk
-
+import git
 
 load_dotenv()
 
-SENTRY_DSN = os.getenv("SENTRY_DSN")
+BUILD_SHA: str = git.Repo(search_parent_directories=True).head.object.hexsha[:7]
+SENTRY_DSN: str = os.getenv("SENTRY_DSN")
+ENVIRONMENT: str = os.getenv("ENVIRONMENT")
 
-if SENTRY_DSN is not None:
-    sentry_sdk.init(dsn=SENTRY_DSN, traces_sample_rate=1.0)
+print(f"Running server build {BUILD_SHA} in {ENVIRONMENT} environment")
+
+if SENTRY_DSN is not None and ENVIRONMENT is not None and BUILD_SHA is not None:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=1.0,
+        environment=ENVIRONMENT,
+        release=BUILD_SHA,
+    )
 
 
 yt_api = Api(api_key=os.getenv("YT_API_KEY"))
@@ -83,6 +91,13 @@ spotify_credentials = spotipy.SpotifyClientCredentials(
 spotify = spotipy.Spotify(client_credentials_manager=spotify_credentials)
 
 
+@app.route("/version")
+def version():
+    return {
+        "version": BUILD_SHA,
+    }
+
+
 @app.route("/")
 def index():
     return {
@@ -108,10 +123,6 @@ def download(spotify_track_id):
         [artist["name"] for artist in metadata["album"]["artists"]]
     )
     image_url = metadata["album"]["images"][0]["url"]
-    track_num = metadata["track_number"]
-    total_tracks = metadata["album"]["total_tracks"]
-    disc_num = metadata["disc_number"]
-    total_discs = metadata["disc_number"]
 
     yt_video_id = requests.get(
         f"{INVIDIOUS_INSTANCE}/api/v1/search",
@@ -154,6 +165,11 @@ def metrics():
     multiprocess.MultiProcessCollector(registry)
     data = generate_latest(registry)
     return Response(data, mimetype=CONTENT_TYPE_LATEST)
+
+
+@app.route("/sentry-debug")
+def trigger_error():
+    return 1 / 0
 
 
 if __name__ == "__main__":
