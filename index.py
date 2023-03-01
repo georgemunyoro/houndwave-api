@@ -27,20 +27,20 @@ def traces_sampler(sampling_context):
     return True
 
 
-if SENTRY_DSN is not None and ENVIRONMENT is not None and BUILD_SHA is not None:
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        traces_sample_rate=1.0,
-        environment=ENVIRONMENT,
-        release=BUILD_SHA,
-        integrations=[
-            FlaskIntegration(),
-        ],
-        _experiments={
-            "profiles_sample_rate": 1.0,
-        },
-        traces_sampler=traces_sampler,
-    )
+# if SENTRY_DSN is not None and ENVIRONMENT is not None and BUILD_SHA is not None:
+#     sentry_sdk.init(
+#         dsn=SENTRY_DSN,
+#         traces_sample_rate=1.0,
+#         environment=ENVIRONMENT,
+#         release=BUILD_SHA,
+#         integrations=[
+#             FlaskIntegration(),
+#         ],
+#         _experiments={
+#             "profiles_sample_rate": 1.0,
+#         },
+#         traces_sampler=traces_sampler,
+#     )
 
 
 SAVE_DIR = os.getenv("SAVE_DIR")
@@ -90,57 +90,50 @@ def query():
 
 @app.route("/download/<spotify_track_id>")
 def download(spotify_track_id):
-    try:
-        metadata = spotify.track(spotify_track_id)
+    metadata = spotify.track(spotify_track_id)
 
-        title = metadata["name"]
-        album = metadata["album"]["name"]
-        date = metadata["album"]["release_date"]
-        artist = ", ".join([artist["name"] for artist in metadata["artists"]])
-        album_artists = ", ".join(
-            [artist["name"] for artist in metadata["album"]["artists"]]
-        )
-        image_url = metadata["album"]["images"][0]["url"]
+    title = metadata["name"]
+    album = metadata["album"]["name"]
+    date = metadata["album"]["release_date"]
+    artist = ", ".join([artist["name"] for artist in metadata["artists"]])
+    album_artists = ", ".join(
+        [artist["name"] for artist in metadata["album"]["artists"]]
+    )
+    image_url = metadata["album"]["images"][0]["url"]
 
-        yt_video_id = requests.get(
-            f"{INVIDIOUS_INSTANCE}/api/v1/search",
-            params={"q": f"{artist} {title}"},
-        ).json()[0]["videoId"]
+    yt_video_id = requests.get(
+        f"{INVIDIOUS_INSTANCE}/api/v1/search",
+        params={"q": f"{artist} {title}"},
+    ).json()[0]["videoId"]
 
-        ydl_opts = {
-            "outtmpl": SAVE_DIR + "%(id)s.%(ext)s",
-            "format": "bestaudio/best",
-            "postprocessors": [
-                {"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}
-            ],
-        }
+    ydl_opts = {
+        "outtmpl": SAVE_DIR + "%(id)s.%(ext)s",
+        "format": "bestaudio/best",
+        "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
+    }
 
-        with YoutubeDL(ydl_opts) as ydl:
-            ydl.download([f"https://www.youtube.com/watch?v={yt_video_id}"])
+    with YoutubeDL(ydl_opts) as ydl:
+        ydl.download([f"https://www.youtube.com/watch?v={yt_video_id}"])
 
-        filename = f"{SAVE_DIR}{yt_video_id}.mp4"
-        print(filename)
+    filename = f"{SAVE_DIR}{yt_video_id}.mp4"
+    print(filename)
 
-        f = MP4(filename)
+    f = MP4(filename)
 
-        f["\xa9nam"] = str(title)
-        f["\xa9alb"] = str(album)
-        f["\xa9ART"] = str(artist)
-        f["aART"] = str(album_artists)
-        f["\xa9day"] = date.split("-")[0]
+    f["\xa9nam"] = str(title)
+    f["\xa9alb"] = str(album)
+    f["\xa9ART"] = str(artist)
+    f["aART"] = str(album_artists)
+    f["\xa9day"] = date.split("-")[0]
 
-        img_data = urllib.request.urlopen(image_url).read()
-        f["covr"] = [MP4Cover(img_data, imageformat=MP4Cover.FORMAT_JPEG)]
+    img_data = urllib.request.urlopen(image_url).read()
+    f["covr"] = [MP4Cover(img_data, imageformat=MP4Cover.FORMAT_JPEG)]
 
-        f.save()
+    f.save()
 
-        return send_file(
-            filename, as_attachment=True, download_name=f"{artist} - {title}.mp4"
-        )
-    except Exception as e:
-        sentry_sdk.capture_exception(e)
-        print(e)
-        return {"error": str(e)}
+    return send_file(
+        filename, as_attachment=True, download_name=f"{artist} - {title}.mp4"
+    )
 
 
 if __name__ == "__main__":
