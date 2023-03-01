@@ -15,6 +15,7 @@ ENV INVIDIOUS_INSTANCE=$INVIDIOUS_INSTANCE
 ENV PROMETHEUS_MULTIPROC_DIR=$PROMETHEUS_MULTIPROC_DIR
 ENV SENTRY_DSN=$SENTRY_DSN
 ENV ENVIRONMENT=$ENVIRONMENT
+ENV TIMEOUT=$TIMEOUT
 
 RUN pip install -r requirements.txt
 
@@ -25,5 +26,5 @@ EXPOSE 8000
 
 RUN apt-get -y update && apt-get -y upgrade && apt-get install -y --no-install-recommends ffmpeg
 
-CMD PROMETHEUS_MULTIPROC_DIR=$PROMETHEUS_MULTIPROC_DIR gunicorn -c gunicorn_conf.py --bind 0.0.0.0:8000 --workers=$WORKER_COUNT index:app
+CMD PROMETHEUS_MULTIPROC_DIR=$PROMETHEUS_MULTIPROC_DIR gunicorn -c gunicorn_conf.py --bind 0.0.0.0:8000 --workers=$WORKER_COUNT --timeout $TIMEOUT index:app
 
