@@ -115,6 +115,9 @@ def download(spotify_track_id):
             ],
         }
 
+        if (PROXY_URL := os.getenv("PROXY_URL")) is not None:
+            ydl_opts["proxy"] = PROXY_URL
+
         with YoutubeDL(ydl_opts) as ydl:
             ydl.download([f"https://www.youtube.com/watch?v={yt_video_id}"])
 
