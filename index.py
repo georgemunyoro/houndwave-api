@@ -19,7 +19,9 @@ load_dotenv()
 BUILD_SHA: str = "unknown"
 
 try:
-    BUILD_SHA = git.Repo(search_parent_directories=True).head.object.hexsha[:7]
+    is_git_repo = git.Repo(search_parent_directories=True) is not None
+    if is_git_repo:
+        BUILD_SHA = git.Repo(search_parent_directories=True).head.object.hexsha[:7]
 except:
     if os.getenv("BUILD_SHA") is not None:
         BUILD_SHA = os.getenv("BUILD_SHA")
