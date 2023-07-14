@@ -14,5 +14,6 @@ services:
       ENVIRONMENT: $ENVIRONMENT
       TIMEOUT: $TIMEOUT
       PROXY_URL: $PROXY_URL
+      BUILD_SHA: $BUILD_SHA
     ports:
       - $PORT:8000

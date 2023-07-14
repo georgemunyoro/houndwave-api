@@ -16,7 +16,14 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 
 load_dotenv()
 
-BUILD_SHA: str = git.Repo(search_parent_directories=True).head.object.hexsha[:7]
+BUILD_SHA: str = "unknown"
+
+try:
+    git.Repo(search_parent_directories=True).head.object.hexsha[:7]
+except:
+    if os.getenv("BUILD_SHA") is not None:
+        BUILD_SHA = os.getenv("BUILD_SHA")
+
 SENTRY_DSN: str = os.getenv("SENTRY_DSN")
 ENVIRONMENT: str = os.getenv("ENVIRONMENT")
 
